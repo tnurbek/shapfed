@@ -42,8 +42,8 @@ misc_arg.add_argument('--ckpt_dir', type=str, default='./ckpt/', help='Directory
 misc_arg.add_argument('--logs_dir', type=str, default='./logs/', help='Directory in which Tensorboard logs wil be stored')
 misc_arg.add_argument('--resume', type=str2bool, default=False, help='Whether to resume training from checkpoint')
 misc_arg.add_argument('--print_freq', type=int, default=10, help='How frequently to print training details')
-misc_arg.add_argument('--save_name', type=str, default='custom_niidv1', help='Name of the model to save as')
-misc_arg.add_argument('--model_num', type=int, default=2, help='Number of models to train for CaPriDe')
+misc_arg.add_argument('--save_name', type=str, default='custom_niidv1_lr001_diffdata_hier', help='Name of the model to save as')
+misc_arg.add_argument('--model_num', type=int, default=4, help='Number of models to train for CaPriDe')
 misc_arg.add_argument('--malignant_num', type=int, default=0, help='Number of poisonous models')
 misc_arg.add_argument('--shapley', type=str2bool, default=True, help='Whether to use Shapley Computation')
 misc_arg.add_argument('--total_lambda', type=int, default=1, help='Total sum of lambda coefficient')
@@ -51,6 +51,16 @@ misc_arg.add_argument('--intersection', type=float, default=0.0, help='Intersect
 
 misc_arg.add_argument('--use_wandb', type=str2bool, default=True, help='Whether to use wandb for visualization') 
 misc_arg.add_argument('--use_tensorboard', type=str2bool, default=True, help='Whether to use tensorboard for visualization') 
+
+data_arg.add_argument('--split', type=str, default='imbalanced', help='Data aplitting scenario')  # homogeneous, heterogeneous, imbalanced 
+misc_arg.add_argument('--alpha', type=float, default=1.0, help='Parameter of Dirichlet distribution') 
+misc_arg.add_argument('--rho', type=float, default=0.7, help='Major allocation probability') 
+misc_arg.add_argument('--alloc_n', type=int, default=1, help='The number of major allocation probs') 
+
+misc_arg.add_argument('--aggregation', type=int, default=1, help='Aggregation Method: 1, 2') 
+misc_arg.add_argument('--num_rounds', type=int, default=50, help='The number of comm. rounds') 
+misc_arg.add_argument('--num_lepochs', type=int, default=5, help='The number of local epochs') 
+
 
 def get_config():
     config, unparsed = parser.parse_known_args()
