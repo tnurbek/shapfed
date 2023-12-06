@@ -21,3 +21,20 @@ class SimpleNetwork(nn.Module):
         x = self.relu(self.fc4(x)) 
         x = self.fc5(x) 
         return x
+
+
+class Model(nn.Module):
+    def __init__(self, model_name='efficientnet_b0', num_classes, pretrained=True):
+        super(Model, self).__init__()
+        '''
+        # Load the pretrained model from the Model Hub. 
+        # Note that this was only made for VGG and ResNet models. 
+        # You can add your pytorch models here too or create a whole model definition.
+        '''
+        
+        self.model = getattr(models, model_name)(pretrained=pretrained)
+        self.fc = nn.Linear(1000, num_classes)
+
+    def forward(self, x):
+        x = self.fc(F.relu(self.model(x)))
+        return x
