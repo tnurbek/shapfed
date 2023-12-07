@@ -447,7 +447,7 @@ for round in range(num_rounds):
     
     # tensorboard 
     if use_tensorboard:
-        writer.add_scalar(f"valid_acc", val_accuracy, global_step=round) 
+        writer.add_scalar(f"valid_acc", np.mean(val_accuracy)*100, global_step=round) 
     
     # Compute Shapley values for each client 
     temp_shapley_values, temp_class_shapley_values = compute_approximate_shapley_value_3(clients, test_data_loader[0], weights) 
