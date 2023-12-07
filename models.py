@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 
 
 input_dim = 5 
@@ -31,12 +32,10 @@ class Model(nn.Module):
         # Note that this was only made for VGG and ResNet models. 
         # You can add your pytorch models here too or create a whole model definition.
         '''
-        
         self.model = getattr(models, model_name)(pretrained=pretrained)
-        nftrs = self.model._fc.in_features
+        nftrs = self.model.classifier[1].in_features
         print("Number of features output by EfficientNet", nftrs)
-        self.model._fc = nn.Linear(nftrs, num_classes)
+        self.model.classifier[1] = nn.Linear(nftrs, num_classes)
 
     def forward(self, x):
-        x = self.fc(F.relu(self.model(x)))
-        return x
+        return self.model(x)

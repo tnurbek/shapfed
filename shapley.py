@@ -11,7 +11,7 @@ import pandas as pd
 from sklearn.metrics import confusion_matrix
 
 from config import get_config 
-from models import SimpleNetwork 
+from models import SimpleNetwork, Model 
 from data_loader import get_custom_train_loader, get_custom_test_loader 
 
 import wandb 
@@ -25,15 +25,23 @@ config, unparsed = get_config()
 
 num_workers = 4 
 pin_memory = True 
-model_num = config.model_num 
+# model_num = config.model_num 
+model_num = 6
 intersection = config.intersection 
 split = config.split 
 batch_size = config.batch_size 
 random_seed = config.random_seed 
 use_tensorboard = config.use_tensorboard 
-use_wandb = config.use_wandb 
+# use_wandb = config.use_wandb 
+use_wandb = False
 aggregation = config.aggregation
 input_dim = 5 
+from FLamby.flamby.datasets.fed_isic2019 import FedIsic2019 as FedDataset
+
+# Initialize pooled datasets
+pooled = FedDataset(train=True, pooled=True)
+pooled_test = FedDataset(train=False, pooled=True)
+
 
 data_dir = '' 
 save_name = config.save_name 
@@ -53,8 +61,39 @@ if use_tensorboard:
 
 # data loader 
 kwargs = {'num_workers': num_workers, 'pin_memory': pin_memory, 'model_name': save_name, 'model_num': model_num, 'intersection': intersection, 'split': split}
-test_data_loader = get_custom_test_loader(data_dir, batch_size, random_seed, **kwargs)
-train_data_loader = get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, **kwargs) 
+# test_data_loader = get_custom_test_loader(pooled_test, batch_size, random_seed, **kwargs)
+# train_data_loader = get_custom_train_loader(pooled, batch_size, random_seed, shuffle=True, **kwargs) 
+# pooled_test_data_loader = get_custom_test_loader(pooled_test, batch_size, random_seed, **kwargs)
+
+from flamby.datasets.fed_isic2019 import (
+    BATCH_SIZE,
+    LR,
+    NUM_EPOCHS_POOLED,
+    Baseline,
+    BaselineLoss,
+    metric,
+    NUM_CLIENTS,
+    get_nb_max_rounds
+)
+
+test_data_loader = [
+            torch.utils.data.DataLoader(
+                FedDataset(center = i, train = False, pooled = False),
+                batch_size = BATCH_SIZE,
+                shuffle = False,
+                num_workers = 0,
+            )
+            for i in range(NUM_CLIENTS)
+        ]
+train_data_loader = [
+            torch.utils.data.DataLoader(
+                FedDataset(center = i, train = True, pooled = False),
+                batch_size = BATCH_SIZE,
+                shuffle = True,
+                num_workers = 0
+            )
+            for i in range(NUM_CLIENTS)
+        ] 
 
 
 def classwise_accuracy(model, dataloader):
@@ -129,7 +168,7 @@ def compute_shapley_value_new(clients, dataloader, weights):
 def compute_approximate_shapley_value(clients, dataloader, weights): 
     n = len(clients) 
     similarity_matrix = torch.zeros((n, 4)) 
-    layer_name = 'fc5.weight' 
+    layer_name = 'model.classifier[1].weight' 
     subsets = [subset for subset in combinations(range(n), n)] 
     for subset in subsets: 
         # Create a temporary server for this subset 
@@ -162,11 +201,11 @@ def compute_approximate_shapley_value(clients, dataloader, weights):
 
 def compute_approximate_shapley_value_3(clients, dataloader, weights): 
     n = len(clients) 
-    num_classes = clients[0].model.state_dict()['fc5.weight'].shape[0]
+    num_classes = clients[0].model.state_dict()['model.classifier[1].weight'].shape[0]
     similarity_matrix = torch.zeros((n, num_classes))  # One similarity value per class
     
-    weight_layer_name = 'fc5.weight'
-    bias_layer_name = 'fc5.bias'
+    weight_layer_name = 'model.classifier[1].weight'
+    bias_layer_name = 'model.classifier[1].bias'
 
     subsets = [subset for subset in combinations(range(n), n)] 
     for subset in subsets: 
@@ -205,7 +244,7 @@ def compute_approximate_shapley_value_3(clients, dataloader, weights):
 def compute_true_approximate_shapley_value(clients, dataloader, weights): 
     n = len(clients) 
     class_v = {}
-    layer_name = 'fc5.weight' 
+    layer_name = 'model.classifier[1].weight' 
     for size in range(1, n+1):
         subsets = [subset for subset in combinations(range(n), size)] 
         for subset in subsets: 
@@ -254,7 +293,7 @@ def compute_true_approximate_shapley_value(clients, dataloader, weights):
 # Client Class
 class Client:
     def __init__(self, dataloader, client_id):
-        self.model = SimpleNetwork().cuda()
+        self.model = Model().cuda()
         self.dataloader = dataloader
         self.optimizer = optim.SGD(self.model.parameters(), lr=0.01)
         self.client_id = client_id
@@ -282,7 +321,7 @@ class Client:
 # Server Class
 class Server:
     def __init__(self, clients):
-        self.model = SimpleNetwork().cuda()
+        self.model = Model().cuda()
         self.clients = clients
 
     def aggregate(self, coefficients):
@@ -354,6 +393,7 @@ class Server:
 client_loaders = train_data_loader 
 
 clients = [Client(loader, i) for i, loader in enumerate(client_loaders[:-1])]
+print(len(clients))
 server = Server(clients) 
 weights = [1 / model_num] * model_num 
 static_shapley_values = None 
@@ -373,6 +413,7 @@ for round in range(num_rounds):
     #     server.model.load_state_dict(server_model)
     
     for cl_idx, client in enumerate(clients): 
+        print(f"Current cl_idx: {cl_idx}, Length of num_lepochs: {len(num_lepochs)}")
         client.train(epochs = num_lepochs[cl_idx]) 
     
     print('#' * 100)
@@ -382,10 +423,10 @@ for round in range(num_rounds):
         print(f"[Client {idx}] Round {round + 1}/{num_rounds}, Balanced Accuracy: {np.mean(client_val_accuracy)*100:.2f}%, {client_val_accuracy}")
 
         # wandb 
-        if use_wandb:
-            wandb.log({f"balanced_valid_acc_{idx}": np.mean(client_val_accuracy) * 100, "round": round}) 
-            for j, acc in enumerate(client_val_accuracy):
-                wandb.log({f"client_{idx}/class_acc_{j}": acc, "round": round}) 
+        # if use_wandb:
+        #     wandb.log({f"balanced_valid_acc_{idx}": np.mean(client_val_accuracy) * 100, "round": round}) 
+        #     for j, acc in enumerate(client_val_accuracy):
+        #         wandb.log({f"client_{idx}/class_acc_{j}": acc, "round": round}) 
         
         # tensorboard 
         if use_tensorboard:
@@ -396,12 +437,13 @@ for round in range(num_rounds):
     
     # here, I just used server.evaluate, since the test set is balanced;
     # ideally, in fed-isic case, change it class-wise accuracy (balanced): Toluwani. 
-    val_accuracy, val_loss = server.evaluate(test_data_loader[-1]) 
+    # val_accuracy, val_loss = server.evaluate(test_data_loader[-1]) 
+    val_accuracy = classwise_accuracy(server.model, test_data_loader[-1])
     print(f"Round {round + 1}/{num_rounds}, Validation Accuracy: {val_accuracy:.2f}%, Validation Loss: {val_loss:.4f}") 
 
     # wandb 
-    if use_wandb:
-        wandb.log({f"valid_acc": val_accuracy, "round": round}) 
+    # if use_wandb:
+    #     wandb.log({f"valid_acc": val_accuracy, "round": round}) 
     
     # tensorboard 
     if use_tensorboard:
@@ -449,8 +491,8 @@ for round in range(num_rounds):
     
     print('#' * 100, end="\n\n") 
 
-    if use_wandb:
-        wandb.log({f"class_shapley_value_{round}": wandb.Table(dataframe=pd.DataFrame(class_shapley_values)), "round": round})
+    # if use_wandb:
+    #     wandb.log({f"class_shapley_value_{round}": wandb.Table(dataframe=pd.DataFrame(class_shapley_values)), "round": round})
 
 
     # aggregate the weights and broadcast 
