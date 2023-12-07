@@ -5,6 +5,8 @@ import numpy as np
 import torch 
 from torch.utils.data import Dataset 
 
+from config import get_config
+config, unparsed = get_config() 
 
 def generate_data(n_points_per_center, primary_centers, secondary_offsets, cov_matrices):
     """
@@ -72,10 +74,10 @@ class CustomDataset(Dataset):
         return sample 
 
 
-def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0):
+def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0, split='heterogeneous'):
     # define transforms
     
-    n_points_per_center = 2000
+    n_points_per_center = 1000 
     # Parameters
     primary_centers = [torch.tensor([-4, 4]),  # top left 
                     torch.tensor([4, 4]),   # top right 
@@ -125,6 +127,8 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
     if "_iid_" in model_name:
         is_iid = True
     
+    # is_iid = True
+    
     if pnumber == 1:
         return [
                     torch.utils.data.DataLoader(
@@ -154,17 +158,55 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
     torch.set_printoptions(precision=3)
     probs = []
     for i in range(num_classes):
-        if is_iid: 
+        if split == 'homogeneous': 
             probs.append([1.0 / pnumber] * pnumber)
+        elif split == 'imbalanced': 
+            rho = config.rho 
+            n = config.alloc_n 
+            major_allocation = [rho] * n
+            remaining_allocation = [(1 - sum(major_allocation)) / (model_num - n)] * (model_num - n) 
+            prob = major_allocation + remaining_allocation 
+            probs.append(prob) 
         else:
-            if i < until_index:
-                # if i % 2 == 0:
-                if i < 2:
-                    probs.append([1.0, 0.0])
+            if pnumber == 2: 
+                if i < until_index:
+                    if i < 2:
+                        probs.append([1.0, 0.0])
+                    else:
+                        probs.append([0.0, 1.0])
                 else:
-                    probs.append([0.0, 1.0])
-            else:
-                probs.append([1.0 / pnumber] * pnumber) 
+                    probs.append([1.0 / pnumber] * pnumber) 
+            elif pnumber == 4: 
+                scenario = 2 
+                if scenario == 1: 
+                    if i < until_index: 
+                        if i == 0: 
+                            probs.append([1.0, 0.0, 0.0, 0.0])
+                        elif i == 1:
+                            probs.append([0.0, 1.0, 0.0, 0.0])
+                        elif i == 2:
+                            probs.append([0.0, 0.0, 1.0, 0.0])
+                        elif i == 3:
+                            probs.append([0.0, 0.0, 0.0, 1.0]) 
+                    else: 
+                        probs.append([1.0 / pnumber] * pnumber) 
+                else: 
+                    if i == 0:
+                        probs.append([0.75, 0.25, 0.0, 0.0]) 
+                    elif i == 1:
+                        probs.append([0.15, 0.85, 0.0, 0.0]) 
+                    elif i == 2:
+                        probs.append([0.0, 0.0, 0.05, 0.95]) 
+                    elif i == 3:
+                        probs.append([0.0, 0.0, 0.5, 0.5]) 
+                    # if i == 0:
+                    #     probs.append([0.25, 0.25, 0.25, 0.25])
+                    # elif i == 1:
+                    #     probs.append([0.5, 0.25, 0.25, 0.0])
+                    # elif i == 2:
+                    #     probs.append([0.75, 0.25, 0.0, 0.0])
+                    # elif i == 3:
+                    #     probs.append([1.0, 0.0, 0.0, 0.0])
     print(probs, end="\n\n") 
 
     # division 
@@ -207,9 +249,7 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
 
 
 
-
-
-def get_custom_test_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0): 
+def get_custom_test_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0, split=''): 
 
     # Parameters 
     n_points_per_center = 400 

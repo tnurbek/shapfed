@@ -79,18 +79,18 @@ from flamby.datasets.fed_isic2019 import (
 test_data_loader = [
             torch.utils.data.DataLoader(
                 FedDataset(center = i, train = False, pooled = False),
-                batch_size = BATCH_SIZE,
+                batch_size = batch_size,
                 shuffle = False,
-                num_workers = 0,
+                num_workers = 4,
             )
             for i in range(NUM_CLIENTS)
         ]
 train_data_loader = [
             torch.utils.data.DataLoader(
                 FedDataset(center = i, train = True, pooled = False),
-                batch_size = BATCH_SIZE,
+                batch_size = batch_size,
                 shuffle = True,
-                num_workers = 0
+                num_workers = 4
             )
             for i in range(NUM_CLIENTS)
         ] 
@@ -168,7 +168,7 @@ def compute_shapley_value_new(clients, dataloader, weights):
 def compute_approximate_shapley_value(clients, dataloader, weights): 
     n = len(clients) 
     similarity_matrix = torch.zeros((n, 4)) 
-    layer_name = 'model.classifier[1].weight' 
+    layer_name = 'model.classifier.1.weight' 
     subsets = [subset for subset in combinations(range(n), n)] 
     for subset in subsets: 
         # Create a temporary server for this subset 
@@ -200,12 +200,12 @@ def compute_approximate_shapley_value(clients, dataloader, weights):
 
 
 def compute_approximate_shapley_value_3(clients, dataloader, weights): 
-    n = len(clients) 
-    num_classes = clients[0].model.state_dict()['model.classifier[1].weight'].shape[0]
+    n = len(clients)
+
+    num_classes = clients[0].model.state_dict()['model.classifier.1.weight'].shape[0]
     similarity_matrix = torch.zeros((n, num_classes))  # One similarity value per class
-    
-    weight_layer_name = 'model.classifier[1].weight'
-    bias_layer_name = 'model.classifier[1].bias'
+    weight_layer_name = 'model.classifier.1.weight'
+    bias_layer_name = 'model.classifier.1.bias'
 
     subsets = [subset for subset in combinations(range(n), n)] 
     for subset in subsets: 
@@ -244,7 +244,7 @@ def compute_approximate_shapley_value_3(clients, dataloader, weights):
 def compute_true_approximate_shapley_value(clients, dataloader, weights): 
     n = len(clients) 
     class_v = {}
-    layer_name = 'model.classifier[1].weight' 
+    layer_name = 'model.classifier.1.weight' 
     for size in range(1, n+1):
         subsets = [subset for subset in combinations(range(n), size)] 
         for subset in subsets: 
