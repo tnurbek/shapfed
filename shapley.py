@@ -25,8 +25,8 @@ config, unparsed = get_config()
 
 num_workers = 4 
 pin_memory = True 
-# model_num = config.model_num 
-model_num = 6
+# model_num = config.model_num
+model_num = 5
 intersection = config.intersection 
 split = config.split 
 batch_size = config.batch_size 
@@ -391,9 +391,9 @@ class Server:
 
 
 client_loaders = train_data_loader 
-
+# print(len(client_loaders))
 clients = [Client(loader, i) for i, loader in enumerate(client_loaders[:-1])]
-print(len(clients))
+# print(len(clients))
 server = Server(clients) 
 weights = [1 / model_num] * model_num 
 static_shapley_values = None 
@@ -439,7 +439,7 @@ for round in range(num_rounds):
     # ideally, in fed-isic case, change it class-wise accuracy (balanced): Toluwani. 
     # val_accuracy, val_loss = server.evaluate(test_data_loader[-1]) 
     val_accuracy = classwise_accuracy(server.model, test_data_loader[-1])
-    print(f"Round {round + 1}/{num_rounds}, Validation Accuracy: {val_accuracy:.2f}%, Validation Loss: {val_loss:.4f}") 
+    print(f"Round {round + 1}/{num_rounds}, Validation Accuracy: {np.mean(val_accuracy)*100:.2f}%, {val_accuracy}") 
 
     # wandb 
     # if use_wandb:
