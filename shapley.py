@@ -55,6 +55,7 @@ if use_tensorboard:
 kwargs = {'num_workers': num_workers, 'pin_memory': pin_memory, 'model_name': save_name, 'model_num': model_num, 'intersection': intersection, 'split': split}
 from FLamby.flamby.datasets.fed_isic2019 import *
 test_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = False, pooled = False), batch_size = BATCH_SIZE, shuffle = False, num_workers = 4,) for i in range(NUM_CLIENTS)]
+server_val_loader = [torch.utils.data.DataLoader(FedIsic2019(train = False, pooled = True), batch_size = BATCH_SIZE, shuffle = False, num_workers = 4,)]
 train_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = True, pooled = False), batch_size = BATCH_SIZE, shuffle = True, num_workers = 4,) for i in range(NUM_CLIENTS)]
 
 def classwise_accuracy(model, dataloader):
@@ -348,10 +349,9 @@ class Server:
         avg_loss = loss / len(dataloader)
         return accuracy, avg_loss
 
-
 client_loaders = train_data_loader 
 
-clients = [Client(loader, i) for i, loader in enumerate(client_loaders[:-1])]
+clients = [Client(loader, i) for i, loader in enumerate(client_loaders)]
 server = Server(clients) 
 weights = [1 / model_num] * model_num 
 static_shapley_values = None 
@@ -394,7 +394,7 @@ for round in range(num_rounds):
     
     # here, I just used server.evaluate, since the test set is balanced;
     # ideally, in fed-isic case, change it class-wise accuracy (balanced): Toluwani.
-    val_accuracy = classwise_accuracy(server.model, test_data_loader[-1])
+    val_accuracy = classwise_accuracy(server.model, server_val_loader[-1])
     print(f"Round {round + 1}/{num_rounds}, Validation Accuracy: {np.mean(val_accuracy)*100:.2f}%, {val_accuracy}")
 
     # wandb 
