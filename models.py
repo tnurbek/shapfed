@@ -34,7 +34,7 @@ class Model(nn.Module):
         '''
         self.model = getattr(models, model_name)(pretrained=pretrained)
         nftrs = self.model.classifier[1].in_features
-        print("Number of features output by EfficientNet", nftrs)
+        # print("Number of features output by EfficientNet", nftrs)
         self.model.classifier[1] = nn.Linear(nftrs, num_classes)
 
     def forward(self, x):
