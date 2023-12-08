@@ -290,10 +290,10 @@ class Server:
             client_weights = client.get_weights()
 
             if total_weights is None:
-                total_weights = {name: torch.zeros_like(param) for name, param in client_weights.items()}
+                total_weights = {name: torch.zeros_like(param).float() for name, param in client_weights.items()}
 
             for name, param in client_weights.items():
-                total_weights[name] += coefficients[client_id] * param 
+                total_weights[name] += torch.tensor(coefficients[client_id]).float() * param.float() 
 
         # for name in total_weights: 
         #     total_weights[name] /= len(self.clients) 

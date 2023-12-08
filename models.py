@@ -25,7 +25,7 @@ class SimpleNetwork(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, model_name='efficientnet_b0', num_classes=8, pretrained=True):
+    def __init__(self, model_name='efficientnet_b0', num_classes=8, pretrained=False):
         super(Model, self).__init__()
         '''
         # Load the pretrained model from the Model Hub. 
