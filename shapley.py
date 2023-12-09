@@ -395,7 +395,7 @@ for round in range(num_rounds):
     # here, I just used server.evaluate, since the test set is balanced;
     # ideally, in fed-isic case, change it class-wise accuracy (balanced): Toluwani.
     val_accuracy = classwise_accuracy(server.model, server_val_loader[-1])
-    print(f"Round {round + 1}/{num_rounds}, Validation Accuracy: {np.mean(val_accuracy)*100:.2f}%, {val_accuracy}")
+    print(f"Round {round + 1}/{num_rounds}, Server Accuracy: {np.mean(val_accuracy)*100:.2f}%, {val_accuracy}")
 
     # wandb 
     if use_wandb:
