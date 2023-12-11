@@ -31,14 +31,14 @@ split = config.split
 batch_size = config.batch_size 
 random_seed = config.random_seed 
 use_tensorboard = config.use_tensorboard 
-use_wandb = False
-aggregation = config.aggregation
+use_wandb = True
+aggregation = 2
 input_dim = 5 
 
 data_dir = '' 
-save_name = config.save_name 
+save_name = 'sgdm0001' 
 
-file_name = f'{save_name}_p{model_num}_batch{batch_size}_{split}_inter{intersection}_seed{random_seed}' 
+file_name = f'{save_name}_p{model_num}_batch{batch_size}_inter{intersection}_seed{random_seed}_agg{aggregation}' 
 
 # Check if CUDA is available and set device accordingly
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,9 +54,9 @@ if use_tensorboard:
 # data loader 
 kwargs = {'num_workers': num_workers, 'pin_memory': pin_memory, 'model_name': save_name, 'model_num': model_num, 'intersection': intersection, 'split': split}
 from FLamby.flamby.datasets.fed_isic2019 import *
-test_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = False, pooled = False), batch_size = BATCH_SIZE, shuffle = False, num_workers = 4,) for i in range(NUM_CLIENTS)]
-server_val_loader = [torch.utils.data.DataLoader(FedIsic2019(train = False, pooled = True), batch_size = BATCH_SIZE, shuffle = False, num_workers = 4,)]
-train_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = True, pooled = False), batch_size = BATCH_SIZE, shuffle = True, num_workers = 4,) for i in range(NUM_CLIENTS)]
+test_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = False, pooled = False), batch_size = batch_size, shuffle = False, num_workers = 4,) for i in range(NUM_CLIENTS)]
+server_val_loader = [torch.utils.data.DataLoader(FedIsic2019(train = False, pooled = True), batch_size = batch_size, shuffle = False, num_workers = 4,)]
+train_data_loader = [torch.utils.data.DataLoader(FedIsic2019(center = i, train = True, pooled = False), batch_size = batch_size, shuffle = True, num_workers = 4,) for i in range(NUM_CLIENTS)]
 
 def classwise_accuracy(model, dataloader):
     model.eval()
@@ -255,7 +255,7 @@ class Client:
     def __init__(self, dataloader, client_id):
         self.model = Model().cuda()
         self.dataloader = dataloader
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9)
         self.client_id = client_id
 
     def train(self, epochs=1): 
@@ -359,7 +359,8 @@ shapley_values, mu = None, 0.95
 freq_rounds = None 
 
 # Federated Averaging (FedAvg) Algorithm 
-num_rounds = config.num_rounds 
+# num_rounds = config.num_rounds 
+num_rounds = 50
 num_lepochs = [config.num_lepochs] * model_num 
 
 for round in range(num_rounds):
@@ -399,7 +400,7 @@ for round in range(num_rounds):
 
     # wandb 
     if use_wandb:
-        wandb.log({f"valid_acc": val_accuracy, "round": round}) 
+        wandb.log({f"valid_acc": np.mean(val_accuracy) * 100, "round": round}) 
     
     # tensorboard 
     if use_tensorboard:
