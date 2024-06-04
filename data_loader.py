@@ -8,6 +8,9 @@ from torch.utils.data import Dataset
 from config import get_config
 config, unparsed = get_config() 
 
+
+################################ SYNTHETIC DATASET #########################################
+
 def generate_data(n_points_per_center, primary_centers, secondary_offsets, cov_matrices):
     """
     Generate random data for each secondary center associated with a primary class.
@@ -74,7 +77,7 @@ class CustomDataset(Dataset):
         return sample 
 
 
-def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0, split='heterogeneous'):
+def get_custom_train_loader(batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_num=5, split='heterogeneous'):
     # define transforms
     
     n_points_per_center = 1000 
@@ -113,21 +116,16 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
 
     data = (data - mean_values) / std_values 
 
-    # Create an instance of the CustomDataset using the previously generated data and labels
+    # Create an instance of the CustomDataset using the previously generated data and labels 
     dataset = CustomDataset(data, labels)
     
     # Create a DataLoader
-    batch_size = 32     
     
     if shuffle:
         np.random.seed(random_seed)
     torch.manual_seed(random_seed)
 
     is_iid, pnumber = False, model_num 
-    if "_iid_" in model_name:
-        is_iid = True
-    
-    # is_iid = True
     
     if pnumber == 1:
         return [
@@ -150,9 +148,7 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
 
     for i in range(num_classes):
         temp = random.sample(dct[i], len(dct[i]))
-        dct[i] = temp
-    
-    until_index = (1 - intersection) * num_classes 
+        dct[i] = temp 
 
     # probabilities 
     torch.set_printoptions(precision=3)
@@ -163,55 +159,26 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
         elif split == 'imbalanced': 
             rho = config.rho 
             n = config.alloc_n 
-            major_allocation = [rho] * n
+            major_allocation = [rho] * n 
             remaining_allocation = [(1 - sum(major_allocation)) / (model_num - n)] * (model_num - n) 
             prob = major_allocation + remaining_allocation 
             probs.append(prob) 
-        else:
-            if pnumber == 2: 
-                if i < until_index:
-                    if i < 2:
-                        probs.append([1.0, 0.0])
-                    else:
-                        probs.append([0.0, 1.0])
-                else:
-                    probs.append([1.0 / pnumber] * pnumber) 
-            elif pnumber == 4: 
-                scenario = 2 
-                if scenario == 1: 
-                    if i < until_index: 
-                        if i == 0: 
-                            probs.append([1.0, 0.0, 0.0, 0.0])
-                        elif i == 1:
-                            probs.append([0.0, 1.0, 0.0, 0.0])
-                        elif i == 2:
-                            probs.append([0.0, 0.0, 1.0, 0.0])
-                        elif i == 3:
-                            probs.append([0.0, 0.0, 0.0, 1.0]) 
-                    else: 
-                        probs.append([1.0 / pnumber] * pnumber) 
-                else: 
-                    if i == 0:
-                        probs.append([0.75, 0.25, 0.0, 0.0]) 
-                    elif i == 1:
-                        probs.append([0.15, 0.85, 0.0, 0.0]) 
-                    elif i == 2:
-                        probs.append([0.0, 0.0, 0.05, 0.95]) 
-                    elif i == 3:
-                        probs.append([0.0, 0.0, 0.5, 0.5]) 
-                    # if i == 0:
-                    #     probs.append([0.25, 0.25, 0.25, 0.25])
-                    # elif i == 1:
-                    #     probs.append([0.5, 0.25, 0.25, 0.0])
-                    # elif i == 2:
-                    #     probs.append([0.75, 0.25, 0.0, 0.0])
-                    # elif i == 3:
-                    #     probs.append([1.0, 0.0, 0.0, 0.0])
+        else:  # heterogeneous 
+            if pnumber == 4: 
+                if i == 0:
+                    probs.append([0.75, 0.25, 0.0, 0.0]) 
+                elif i == 1:
+                    probs.append([0.15, 0.85, 0.0, 0.0]) 
+                elif i == 2:
+                    probs.append([0.0, 0.0, 0.05, 0.95]) 
+                elif i == 3:
+                    probs.append([0.0, 0.0, 0.5, 0.5]) 
+            else:
+                break 
+
     print(probs, end="\n\n") 
 
     # division 
-    if not is_iid:
-        intersection = 0.0 
     lst = {i: [] for i in range(pnumber)} 
     for class_id, distribution in enumerate(probs):
         from_id = 0 
@@ -221,10 +188,7 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
                 lst[participant_id] += dct[class_id][from_id:to_id]  # to_id 
             else:
                 lst[participant_id] += dct[class_id][from_id:to_id]
-            to_id = math.ceil((1 - intersection) * to_id) 
             from_id = to_id 
-    
-    print("[data_loader.py: ] Number of common data points:", len(list(set(lst[0]) & set(lst[1])))) 
     
     subsets = [torch.utils.data.Subset(dataset, lst[i]) for i in range(pnumber)]
     t_loaders = [torch.utils.data.DataLoader(subsets[i], batch_size=batch_size, shuffle=True) for i in range(pnumber)]
@@ -235,21 +199,14 @@ def get_custom_train_loader(data_dir, batch_size, random_seed, shuffle=True, num
             counts[label[1]] += 1
         print(f'{pi+1} set: ', counts, sum(counts), end="\n")
 
-
     train_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory,
     )
-    
-    # for batch in train_loader:
-    #     print(batch['data'], batch['label'])
-    #     break
 
     return t_loaders + [train_loader] 
 
 
-
-
-def get_custom_test_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_name="", model_num=5, intersection=0.0, split=''): 
+def get_custom_test_loader(batch_size, random_seed, shuffle=False, num_workers=4, pin_memory=True, model_num=5, split=''): 
 
     # Parameters 
     n_points_per_center = 400 
@@ -291,7 +248,6 @@ def get_custom_test_loader(data_dir, batch_size, random_seed, shuffle=True, num_
     dataset = CustomDataset(data, labels)
     
     # Create a DataLoader
-    batch_size = 32     
     
     np.random.seed(random_seed)
     torch.manual_seed(random_seed)
