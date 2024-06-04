@@ -7,3 +7,6 @@
 > [Nurbek Tastan](https://tnurbek.github.io/), [Samar Fares](https://www.linkedin.com/in/samarfares/), [Toluwani Aremu](https://www.toluwaniaremu.com/), [Samuel Horvath](https://samuelhorvath.github.io/), [Karthik Nandakumar](https://www.sprintai.org/nkarthik) 
 
 Official implementation of the paper: "Redefining Contributions: Shapley-Driven Federated Learning" [IJCAI 2024]. 
+
+## Overview
+![main figure](https://tnurbek.github.io/assets/img/shapfed.png)
