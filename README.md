@@ -21,3 +21,18 @@ Official implementation of the paper: "Redefining Contributions: Shapley-Driven 
 pip install -r requirements.txt
 ```
 
+## Run ShapFed algorithm
+Default dataset: synthetic dataset. 
+```
+python3 main_synthetic.py --model_num 4 --aggregation 2 --split heterogeneous --num_rounds 50 --num_lepochs 1 --save_name your_experiment_name 
+```
+
+## Citation 
+```bibtex
+@InProceedings{tastan2024redefining,
+    author    = {Tastan, Nurbek and Fares, Samar and Aremu, Toluwani and Horvath, Samuel and Nandakumar, Karthik},
+    title     = {Redefining Contributions: Shapley-Driven Federated Learning}, 
+    booktitle = {International Joint Conference on Artificial Intelligence (IJCAI)},
+    year      = {2024},
+}
+```
