@@ -3,6 +3,8 @@ import random
 import numpy as np
 
 import torch 
+from torchvision import datasets
+from torchvision import transforms
 from torch.utils.data import Dataset 
 
 from config import get_config
@@ -304,6 +306,162 @@ def get_custom_test_loader(batch_size, random_seed, shuffle=False, num_workers=4
             counts[label[1]] += 1  
         print(f'{pi+1} set: ', counts, sum(counts), end="\n")
 
+
+    data_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size, shuffle=False,
+        num_workers=num_workers, pin_memory=pin_memory,
+    )
+
+    return t_loaders + [data_loader]
+
+
+def get_cifar10_train_loader(data_dir, batch_size, random_seed, shuffle=True, num_workers=4, pin_memory=True, model_num=5, split="homogeneous"): 
+    trans = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(degrees=15),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4915, 0.4823, .4468], [0.2470, 0.2435, 0.2616])
+    ])
+
+    dataset = datasets.CIFAR10(root=data_dir,
+                               transform=trans,
+                               download=True,
+                               train=True)
+    if shuffle:
+        np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    pnumber = model_num 
+
+    lst = []
+    class_size = len(dataset) // len(set(dataset.targets))
+    num_classes = len(set(dataset.targets)) 
+
+    # dictionary of labels map and initializing variables 
+    labels = dataset.targets
+    dct = {label: [] for label in set(labels)}
+    for idx, label in enumerate(labels):
+        dct[label].append(idx)
+
+    for i in range(num_classes):
+        temp = random.sample(dct[i], len(dct[i]))
+        dct[i] = temp 
+
+    # probabilities 
+    torch.set_printoptions(precision=3)
+    probs = []
+    for i in range(num_classes):
+        if split == 'homogeneous': 
+            probs.append([1.0 / pnumber] * pnumber)
+        elif split == 'imbalanced':
+            rho = config.rho 
+            n = config.alloc_n 
+            major_allocation = [rho] * n 
+            remaining_allocation = [(1 - sum(major_allocation)) / (model_num - n)] * (model_num - n) 
+            prob = major_allocation + remaining_allocation 
+            probs.append(prob) 
+        else:  # heterogeneous 
+            if pnumber == 2: 
+                if i < 2:
+                    probs.append([1.0, 0.0])
+                else:
+                    probs.append([0.0, 1.0])
+            elif pnumber == 4: 
+                if i == 0:
+                    probs.append([1.0, 0.0, 0.0, 0.0])
+                else:
+                    probs.append([0.25, 0.25, 0.25, 0.25]) 
+
+
+    print(probs, end="\n\n") 
+    
+    lst = {i: [] for i in range(pnumber)} 
+    for class_id, distribution in enumerate(probs):
+        from_id = 0 
+        for participant_id, prob in enumerate(distribution):
+            to_id = int(from_id + prob * class_size)
+            if participant_id == pnumber - 1:
+                lst[participant_id] += dct[class_id][from_id:to_id]  # to_id 
+            else:
+                lst[participant_id] += dct[class_id][from_id:to_id]
+            from_id = to_id 
+    
+    print("[data_loader.py: ] Number of common data points:", len(list(set(lst[0]) & set(lst[1])))) 
+    
+    subsets = [torch.utils.data.Subset(dataset, lst[i]) for i in range(pnumber)]
+    t_loaders = [torch.utils.data.DataLoader(subsets[i], batch_size=batch_size, shuffle=True) for i in range(pnumber)]
+    
+    for pi in range(pnumber):
+        counts = [0] * 10
+        for label in subsets[pi]:
+            counts[label[1]] += 1
+        print(f'{pi+1} set: ', counts, sum(counts), end="\n")
+
+    train_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=pin_memory,
+    )
+
+    return t_loaders + [train_loader]
+
+
+def get_cifar10_test_loader(data_dir, batch_size, random_seed, num_workers=4, pin_memory=True, model_num=5, split='homogeneous'): 
+    # define transforms
+    trans = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize([0.4915, 0.4823, 0.4468], [0.2470, 0.2435, 0.2616])
+    ])
+
+    # load dataset
+    dataset = datasets.CIFAR10(
+        data_dir, train=False, download=True, transform=trans
+    )
+    
+    pnumber = model_num 
+
+    lst = []
+    class_size = 200 
+    num_classes = len(set(dataset.targets)) 
+
+    # dictionary of labels map
+    labels = dataset.targets
+    dct = {}
+    for idx, label in enumerate(labels):
+        if label not in dct:
+            dct[label] = []
+        dct[label].append(idx)
+
+    for i in range(num_classes):
+        temp = random.sample(dct[i], len(dct[i]))
+        dct[i] = temp
+
+    # probabilities
+    torch.set_printoptions(precision=3)
+    probs = []
+    for i in range(num_classes):
+        probs.append([1.0 / pnumber] * pnumber)
+
+    print(probs, end="\n\n")
+
+    # division
+    lst = {i: [] for i in range(pnumber)}
+    for class_id, distribution in enumerate(probs):
+        from_id = 0
+        for participant_id, prob in enumerate(distribution):
+            to_id = int(from_id + prob * class_size)
+            if participant_id == pnumber - 1:
+                lst[participant_id] += dct[class_id][from_id:to_id]  # to_id
+            else:
+                lst[participant_id] += dct[class_id][from_id:to_id]
+            from_id = to_id
+
+    subsets = [torch.utils.data.Subset(dataset, lst[i]) for i in range(pnumber)]
+    t_loaders = [torch.utils.data.DataLoader(subsets[i], batch_size=batch_size, shuffle=False) for i in range(pnumber)]
+    
+    for pi in range(pnumber):
+        counts = [0] * 10
+        for label in subsets[pi]:
+            counts[label[1]] += 1
+        print(f'{pi+1} set: ', counts, sum(counts), end="\n")
 
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=False,

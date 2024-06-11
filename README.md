@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ## Run ShapFed algorithm
 Default dataset: synthetic dataset. 
 ```
-python3 main_synthetic.py --model_num 4 --aggregation 2 --split heterogeneous --num_rounds 50 --num_lepochs 1 --save_name your_experiment_name 
+python3 main_synthetic.py --model_num 4 --aggregation 2 --split heterogeneous --num_rounds 50 --num_lepochs 1 
 ```
 
 ## Citation 
