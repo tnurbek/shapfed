@@ -133,4 +133,4 @@ wheel==0.41.2
 y-py==0.5.9
 yarl==1.9.4
 ypy-websocket==0.8.2
-zipp==3.11.0
+zipp==3.19.1
