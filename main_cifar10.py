@@ -123,6 +123,8 @@ class Client:
     def train(self, epochs=1): 
         self.model.train()
         criterion = nn.CrossEntropyLoss()
+        initial_weights = self.get_weights()
+        
         for _ in range(epochs): 
             for data, target in self.dataloader:
                 data, target = data.cuda(), target.cuda()
@@ -132,16 +134,20 @@ class Client:
                 loss.backward()
                 self.optimizer.step()
 
+        final_weights = self.get_weights()
+        self.compute_full_grad(initial_weights, final_weights)
+
     def get_weights(self):
         return self.model.state_dict()
 
     def set_weights(self, weights):
         self.model.load_state_dict(weights)
     
+    def compute_full_grad(self, initial_weights, final_weights):
+        self.full_grads = {name: (1 / self.optimizer.param_groups[0]['lr']) * (initial_weights[name] - final_weights[name]) for name in initial_weights}
+    
     def get_gradients(self): 
-        # Collecting and returning the gradients
-        gradients = {name: param.grad.clone() for name, param in self.model.named_parameters() if param.grad is not None}
-        return gradients
+        return self.full_grads 
     
 
 # Server Class

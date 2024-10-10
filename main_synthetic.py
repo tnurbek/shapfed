@@ -89,7 +89,7 @@ def compute_cssv(clients, weights):
             w1 = torch.cat([
                 temp_server.model.state_dict()[weight_layer_name][cls_id].view(-1),
                 temp_server.model.state_dict()[bias_layer_name][cls_id].view(-1)
-            ]).view(1, -1)
+            ]).view(1, -1) # Change to grads
             w1 = F.normalize(w1, p=2)
 
             for client_id in range(len(subset)):
