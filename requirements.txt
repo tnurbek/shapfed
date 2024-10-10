@@ -66,7 +66,7 @@ pathtools==0.1.2
 patsy==0.5.3
 pexpect==4.8.0
 pickleshare==0.7.5
-pip==23.2.1
+pip>=23.3
 platformdirs==3.10.0
 ply==3.11
 prometheus-client==0.14.1
