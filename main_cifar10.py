@@ -10,6 +10,7 @@ from config import get_config
 from models import resnet34_model
 from data_loader import get_cifar10_train_loader, get_cifar10_test_loader 
 
+import copy 
 
 import wandb 
 from torch.utils.tensorboard import SummaryWriter 
@@ -75,7 +76,7 @@ def compute_cssv_cifar(clients, weights):
     num_classes = 10 # clients[0].model.state_dict()['linear.weight'].shape[0]
     similarity_matrix = torch.zeros((n, num_classes))  # One similarity value per class
     
-    weight_layer_name = 'linear.weight'
+    weight_layer_name = 'linear.weight' # this is hard-coded, please make sure these names match your model
     bias_layer_name = 'linear.bias'
     subsets = [subset for subset in combinations(range(n), n)] 
     for subset in subsets: 
@@ -84,7 +85,6 @@ def compute_cssv_cifar(clients, weights):
         curr_weights = [weights[j] for j in subset] 
         # normalized_curr_weights = softmax(curr_weights)  # curr_weights / np.sum(curr_weights)
         normalized_curr_weights = curr_weights / np.sum(curr_weights)
-
 
         temp_server = Server(subset_clients) 
         temp_server.aggregate(coefficients=normalized_curr_weights) 
@@ -105,8 +105,9 @@ def compute_cssv_cifar(clients, weights):
                 ]).view(1, -1)
                 w2_grad = F.normalize(w2_grad, p=2)
 
-                # Compute cosine similarity with gradients
+                # compute cosine similarity with gradients 
                 sim = F.cosine_similarity(w1_grad, w2_grad).item()
+                # sim = (sim + 1.0) / 2  # normalize to [0, 1]
                 similarity_matrix[client_id][cls_id] = sim 
     
     shapley_values = torch.mean(similarity_matrix, dim=1).numpy()
@@ -138,7 +139,7 @@ class Client:
         self.compute_full_grad(initial_weights, final_weights)
 
     def get_weights(self):
-        return self.model.state_dict()
+        return copy.deepcopy(self.model.state_dict())
 
     def set_weights(self, weights):
         self.model.load_state_dict(weights)
@@ -230,7 +231,7 @@ for client in clients:
     client.set_weights(server.model.state_dict()) 
     
 weights = [1 / model_num] * model_num 
-shapley_values, mu = None, 0.5 
+shapley_values, mu = None, 0.9 # best practices for mu: 0.9 
 freq_rounds = None 
 
 num_rounds = config.num_rounds 
