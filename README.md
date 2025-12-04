@@ -28,7 +28,7 @@ python3 main_synthetic.py --model_num 4 --aggregation 2 --split heterogeneous --
 ```
 
 ## Citation 
-If you like the work, please consider citing us: 
+If you like the work, please consider citing us and explore other works: 
 
 ```bibtex
 @inproceedings{tastan2024redefining,
@@ -54,7 +54,7 @@ If you like the work, please consider citing us:
     note={}
 }
 
-@InProceedings{tastan2025aequa,
+@inproceedings{tastan2025aequa,
   title = 	 {{Aequa: Fair Model Rewards in Collaborative Learning via Slimmable Networks}},
   author =       {Tastan, Nurbek and Horv\'{a}th, Samuel and Nandakumar, Karthik},
   booktitle = 	 {Proceedings of the 42nd International Conference on Machine Learning},
