@@ -10,6 +10,8 @@ from config import get_config
 from models import SimpleNetwork 
 from data_loader import get_custom_train_loader, get_custom_test_loader 
 
+import copy 
+
 import wandb 
 from torch.utils.tensorboard import SummaryWriter 
 
@@ -78,7 +80,7 @@ def compute_cssv(clients, weights):
     for subset in subsets: 
         # Create a temporary server for this subset 
         subset_clients = [clients[i] for i in subset] 
-        curr_weights = [weights[j] for j in subset] 
+        curr_weights = np.array([weights[j] for j in subset]) 
         normalized_curr_weights = curr_weights / np.sum(curr_weights)
 
         temp_server = Server(subset_clients) 
@@ -102,6 +104,7 @@ def compute_cssv(clients, weights):
 
                 # Compute cosine similarity
                 sim = F.cosine_similarity(w1, w2).item()
+                # sim = (sim + 1.0) / 2  # Normalize to [0, 1] 
                 similarity_matrix[client_id][cls_id] = sim
     
     shapley_values = torch.mean(similarity_matrix, dim=1).numpy()
@@ -113,7 +116,7 @@ class Client:
     def __init__(self, dataloader, client_id):
         self.model = SimpleNetwork().cuda()
         self.dataloader = dataloader
-        self.optimizer = optim.SGD(self.model.parameters(), lr=0.01)  # generic SGD optimizer 
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.1)  # generic SGD optimizer 
         self.client_id = client_id
 
     def train(self, epochs=1): 
@@ -130,13 +133,13 @@ class Client:
                 self.optimizer.step()
 
     def get_weights(self):
-        return self.model.state_dict()
+        return copy.deepcopy(self.model.state_dict())
 
     def set_weights(self, weights):
         self.model.load_state_dict(weights)
     
     def get_gradients(self): 
-        gradients = {name: param.grad.clone() for name, param in self.model.named_parameters() if param.grad is not None}
+        gradients = {name: param.grad.clone() for name, param in self.model.named_parameters() if param.grad is not None} # please refer to cifar10 snippet
         return gradients
 
 
@@ -150,7 +153,7 @@ class Server:
         total_weights = None
 
         for client_id, client in enumerate(self.clients): 
-            client_weights = client.get_gradients() 
+            client_weights = client.get_weights()  # client_weights = client.get_gradients() 
 
             if total_weights is None:
                 total_weights = {name: torch.zeros_like(param) for name, param in client_weights.items()}
@@ -199,7 +202,7 @@ client_loaders = train_data_loader
 clients = [Client(loader, i) for i, loader in enumerate(client_loaders[:-1])]
 server = Server(clients) 
 weights = [1 / model_num] * model_num 
-shapley_values, mu = None, 0.95 
+shapley_values, mu = None, 0.9  # mu works best with 0.9
 freq_rounds = None 
 
 num_rounds = config.num_rounds 
