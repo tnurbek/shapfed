@@ -28,11 +28,45 @@ python3 main_synthetic.py --model_num 4 --aggregation 2 --split heterogeneous --
 ```
 
 ## Citation 
+If you like the work, please consider citing us: 
+
 ```bibtex
-@InProceedings{tastan2024redefining,
-    author    = {Tastan, Nurbek and Fares, Samar and Aremu, Toluwani and Horvath, Samuel and Nandakumar, Karthik},
-    title     = {Redefining Contributions: Shapley-Driven Federated Learning}, 
-    booktitle = {International Joint Conference on Artificial Intelligence (IJCAI)},
-    year      = {2024},
+@inproceedings{tastan2024redefining,
+  title     = {{Redefining Contributions: Shapley-Driven Federated Learning}},
+  author    = {Tastan, Nurbek and Fares, Samar and Aremu, Toluwani and Horváth, Samuel and Nandakumar, Karthik},
+  booktitle = {Proceedings of the Thirty-Third International Joint Conference on
+               Artificial Intelligence, {IJCAI-24}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Kate Larson}, 
+  pages     = {5009--5017},
+  year      = {2024},
+  month     = {8},
+  note      = {Main Track},
 }
+
+@article{tastan2025cycle,
+    title={{{CYC}le: Choosing Your Collaborators Wisely to Enhance Collaborative Fairness in Decentralized Learning}},
+    author={Nurbek Tastan and Samuel Horv{\'a}th and Karthik Nandakumar},
+    journal={Transactions on Machine Learning Research},
+    issn={2835-8856},
+    year={2025},
+    url={https://openreview.net/forum?id=ygqNiLQqfH},
+    note={}
+}
+
+@InProceedings{tastan2025aequa,
+  title = 	 {{Aequa: Fair Model Rewards in Collaborative Learning via Slimmable Networks}},
+  author =       {Tastan, Nurbek and Horv\'{a}th, Samuel and Nandakumar, Karthik},
+  booktitle = 	 {Proceedings of the 42nd International Conference on Machine Learning},
+  pages = 	 {59210--59236},
+  year = 	 {2025},
+  editor = 	 {Singh, Aarti and Fazel, Maryam and Hsu, Daniel and Lacoste-Julien, Simon and Berkenkamp, Felix and Maharaj, Tegan and Wagstaff, Kiri and Zhu, Jerry},
+  volume = 	 {267},
+  series = 	 {Proceedings of Machine Learning Research},
+  month = 	 {13--19 Jul},
+  publisher =    {PMLR},
+  pdf = 	 {https://raw.githubusercontent.com/mlresearch/v267/main/assets/tastan25a/tastan25a.pdf},
+  url = 	 {https://proceedings.mlr.press/v267/tastan25a.html}
+}
+
 ```
